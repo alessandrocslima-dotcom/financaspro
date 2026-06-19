@@ -3451,16 +3451,65 @@ document.getElementById('month-label').textContent = mesLabel;
 document.getElementById('page-badge').textContent  = mesLabel;
 
 /* ═══════════════════════════════════════
-   PWA — SERVICE WORKER + INSTALL
+   PWA — SERVICE WORKER + INSTALL + AUTO-UPDATE
 ═══════════════════════════════════════ */
 let _deferredInstall = null;
+let _swRegistration  = null;
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('sw.js')
-      .then(()=> console.log('SW registrado'))
-      .catch(e=> console.log('SW erro:', e));
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      _swRegistration = reg;
+
+      // Verifica atualização ao abrir
+      reg.update();
+
+      // Nova versão esperando para ser ativada
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        newWorker.addEventListener('statechange', () => {
+          if(newWorker.state === 'installed' && navigator.serviceWorker.controller){
+            _mostrarBannerAtualizar();
+          }
+        });
+      });
+    });
+
+    // Recarrega quando o novo SW assume o controle
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if(!refreshing){ refreshing = true; window.location.reload(); }
+    });
   });
+}
+
+function _mostrarBannerAtualizar(){
+  // Remove banner anterior se existir
+  document.getElementById('banner-update')?.remove();
+  const banner = document.createElement('div');
+  banner.id = 'banner-update';
+  banner.innerHTML = `
+    <div style="position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);
+      background:#1E1B4B;color:white;padding:12px 20px;border-radius:10px;
+      display:flex;align-items:center;gap:14px;z-index:9999;
+      box-shadow:0 8px 32px rgba(0,0,0,0.3);font-size:13px;white-space:nowrap">
+      <span>🔄 Nova versão disponível</span>
+      <button onclick="_aplicarAtualizacao()"
+        style="background:#6366F1;color:white;border:none;padding:6px 14px;
+        border-radius:6px;cursor:pointer;font-size:13px;font-weight:500">
+        Atualizar agora
+      </button>
+      <button onclick="this.parentElement.parentElement.remove()"
+        style="background:transparent;color:rgba(255,255,255,.5);border:none;
+        cursor:pointer;font-size:18px;line-height:1;padding:0 4px">×</button>
+    </div>`;
+  document.body.appendChild(banner);
+}
+
+function _aplicarAtualizacao(){
+  if(_swRegistration?.waiting){
+    _swRegistration.waiting.postMessage('skipWaiting');
+  }
 }
 
 window.addEventListener('beforeinstallprompt', e=>{
