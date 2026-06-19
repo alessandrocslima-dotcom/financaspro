@@ -1948,8 +1948,10 @@ function renderBar(){
 /* ═══════════════════════════════════════
    CATEGORIAS
 ═══════════════════════════════════════ */
-const CATS_FIXOS = ['Pensão alimentícia','Escola / Educação','Saúde','Filhos','Internet','Telefone','Aluguel','Condomínio','Energia Elétrica','Água','Cartão de Crédito','Financiamentos','Assinaturas','Plano de Saúde','Academia','Seguro','Previdência','Outros'];
-const CATS_VAR   = ['Mercado','Delivery','Lazer','Combustível','Farmácia','Restaurante','Bar / Café','Roupas','Eletrônicos','Viagens','Presentes','Evento','Pet','Beleza','Manutenção','Emergências','Hobby','Outros'];
+const CATS_FIXOS_DEFAULT = ['Pensão alimentícia','Escola / Educação','Saúde','Filhos','Internet','Telefone','Aluguel','Condomínio','Energia Elétrica','Água','Cartão de Crédito','Financiamentos','Assinaturas','Plano de Saúde','Academia','Seguro','Previdência','Outros'];
+const CATS_VAR_DEFAULT   = ['Mercado','Delivery','Lazer','Combustível','Farmácia','Restaurante','Bar / Café','Roupas','Eletrônicos','Viagens','Presentes','Evento','Pet','Beleza','Manutenção','Emergências','Hobby','Outros'];
+let CATS_FIXOS = [];
+let CATS_VAR   = [];
 const CATS_REC   = ['Salário','Benefício','Freelance','Investimento','Aluguel Recebido','Pensão Recebida','Outros'];
 const FORMAS     = ['Dinheiro','Pix','Débito','Crédito','Transferência','Cheque'];
 const STATUS_REC = ['Recebido','Pendente'];
@@ -3296,10 +3298,8 @@ function renderConfig(){
   _atualizarPreviewTermometro();
   _renderCfgCats();
   // Categorias fixas/variáveis
-  document.getElementById('cfg-cats-fix').innerHTML =
-    CATS_FIXOS.map(c=>`<span style="background:var(--blue-bg);color:var(--blue-text);font-size:11px;padding:3px 9px;border-radius:99px">${c}</span>`).join('');
-  document.getElementById('cfg-cats-var').innerHTML =
-    CATS_VAR.map(c=>`<span style="background:var(--amber-bg);color:var(--amber-text);font-size:11px;padding:3px 9px;border-radius:99px">${c}</span>`).join('');
+  document.getElementById('cfg-cats-fix').innerHTML = _renderCatsTags('fixo');
+  document.getElementById('cfg-cats-var').innerHTML = _renderCatsTags('var');
   document.getElementById('sb-username').textContent = ST.config.nome || 'Alessandro Lima';
 }
 
@@ -3549,7 +3549,75 @@ function salvarNovaCategoria(){
   toast(`"${nome}" adicionada!`);
 }
 
-function _atualizarPreviewTermometro(){
+/* ── CATEGORIAS EDITÁVEIS ── */
+function _renderCatsTags(tipo){
+  const arr  = tipo==='fixo' ? CATS_FIXOS : CATS_VAR;
+  const bg   = tipo==='fixo' ? 'var(--blue-bg)'   : 'var(--amber-bg)';
+  const col  = tipo==='fixo' ? 'var(--blue-text)'  : 'var(--amber-text)';
+  const bord = tipo==='fixo' ? '#BFDBFE'           : '#FDE68A';
+  return arr.map((c,i)=>`
+    <div style="display:inline-flex;align-items:center;gap:4px;background:${bg};
+      border:1px solid ${bord};border-radius:99px;padding:3px 4px 3px 9px;font-size:12px" id="cat-tag-${tipo}-${i}">
+      <span id="cat-lbl-${tipo}-${i}" style="color:${col};cursor:pointer"
+        onclick="_editarCatInline('${tipo}',${i})"
+        title="Clique para renomear">${c}</span>
+      <button onclick="_removerCat('${tipo}',${i})"
+        style="width:16px;height:16px;border-radius:50%;border:none;background:rgba(0,0,0,.08);
+        color:${col};cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;
+        flex-shrink:0;line-height:1">×</button>
+    </div>`).join('')+`
+  <button onclick="_adicionarCat('${tipo}')"
+    style="font-size:12px;padding:3px 10px;border-radius:99px;border:1px dashed var(--border);
+    background:transparent;color:var(--text-muted);cursor:pointer">+ Adicionar</button>`;
+}
+
+function _editarCatInline(tipo, i){
+  const arr   = tipo==='fixo' ? CATS_FIXOS : CATS_VAR;
+  const lbl   = document.getElementById('cat-lbl-'+tipo+'-'+i);
+  if(!lbl) return;
+  const atual = arr[i];
+  lbl.outerHTML = `<input id="cat-input-${tipo}-${i}"
+    value="${atual}" style="border:none;background:transparent;font-size:12px;
+    outline:1px solid var(--indigo);border-radius:3px;padding:1px 4px;min-width:60px;max-width:120px"
+    onblur="_salvarCatInline('${tipo}',${i},this.value)"
+    onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value='${atual}';this.blur();}">`;
+  setTimeout(()=>{
+    const inp = document.getElementById('cat-input-'+tipo+'-'+i);
+    if(inp){ inp.focus(); inp.select(); }
+  }, 30);
+}
+
+function _salvarCatInline(tipo, i, val){
+  val = val.trim();
+  if(!val) { renderConfig(); return; }
+  const arr = tipo==='fixo' ? CATS_FIXOS : CATS_VAR;
+  arr[i] = val;
+  if(tipo==='fixo') ST.catsFixos = arr;
+  else              ST.catsVar   = arr;
+  salvar(); renderConfig();
+}
+
+function _removerCat(tipo, i){
+  const arr = tipo==='fixo' ? CATS_FIXOS : CATS_VAR;
+  if(arr.length <= 1){ toast('É necessário ter ao menos uma categoria'); return; }
+  if(!confirm(`Remover "${arr[i]}"?`)) return;
+  arr.splice(i, 1);
+  if(tipo==='fixo') ST.catsFixos = arr;
+  else              ST.catsVar   = arr;
+  salvar(); renderConfig();
+  toast('Categoria removida');
+}
+
+function _adicionarCat(tipo){
+  const arr = tipo==='fixo' ? CATS_FIXOS : CATS_VAR;
+  const nome = prompt('Nome da nova categoria:');
+  if(!nome?.trim()) return;
+  arr.push(nome.trim());
+  if(tipo==='fixo') ST.catsFixos = arr;
+  else              ST.catsVar   = arr;
+  salvar(); renderConfig();
+  toast(`"${nome.trim()}" adicionada!`);
+}
   const ok = document.getElementById('cfg-ok')?.value || 70;
   const at = document.getElementById('cfg-atencao')?.value || 85;
   const pe = document.getElementById('cfg-preview-ok');
@@ -3646,6 +3714,10 @@ document.querySelector('.btn-primary[onclick="abrirModal()"]')
    INIT
 ═══════════════════════════════════════ */
 carregarEstado();
+if(!ST.catsFixos) ST.catsFixos = [...CATS_FIXOS_DEFAULT];
+if(!ST.catsVar)   ST.catsVar   = [...CATS_VAR_DEFAULT];
+CATS_FIXOS = ST.catsFixos;
+CATS_VAR   = ST.catsVar;
 if(!ST.bens) ST.bens = [
   { id:1, nome:'Conta Nubank', tipo:'Conta Bancária', emoji:'🏦', valor:4069 },
   { id:2, nome:'Veículo',      tipo:'Veículo',        emoji:'🚗', valor:25000 },
