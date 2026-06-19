@@ -1485,15 +1485,6 @@ function initTheme(){
 /* ═══════════════════════════════════════
    NAVEGAÇÃO
 ═══════════════════════════════════════ */
-function navTo(el){
-  const page = el.dataset.page;
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  el.classList.add('active');
-  document.querySelectorAll('.page-content').forEach(p=>p.classList.remove('active'));
-  document.getElementById('pg-'+page).classList.add('active');
-  document.getElementById('page-title').textContent = PAGE_TITLES[page]||page;
-  if(page==='dashboard') renderDashboard();
-}
 function navToStr(page){
   const el = document.querySelector('[data-page="'+page+'"]');
   if(el) navTo(el);
@@ -3618,6 +3609,8 @@ function _adicionarCat(tipo){
   salvar(); renderConfig();
   toast(`"${nome.trim()}" adicionada!`);
 }
+
+function _atualizarPreviewTermometro(){
   const ok = document.getElementById('cfg-ok')?.value || 70;
   const at = document.getElementById('cfg-atencao')?.value || 85;
   const pe = document.getElementById('cfg-preview-ok');
