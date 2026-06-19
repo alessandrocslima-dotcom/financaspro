@@ -2501,20 +2501,21 @@ function editarSaldoInicialCat(i){
     </div>
     <div class="form-group" style="margin-bottom:12px">
       <label class="form-label">Valor já guardado (R$)</label>
-      <input class="form-input" id="f-saldo-ini-val" type="number" step="0.01" min="0"
+      <input class="form-input" id="f-ini-cat-val" type="number" step="0.01" min="0"
         placeholder="0,00" value="${d.saldoInicial||''}">
     </div>`;
   document.getElementById('modal-foot').innerHTML = `
     <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
     <button class="btn btn-primary" onclick="salvarSaldoInicialCat(${i})">Salvar</button>`;
   document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('f-ini-cat-val')?.focus(), 100);
 }
 
 function salvarSaldoInicialCat(i){
-  const val = parseFloat(document.getElementById('f-saldo-ini-val')?.value) || 0;
+  const val = parseFloat(document.getElementById('f-ini-cat-val')?.value) || 0;
   ST.dist[i].saldoInicial = val;
   salvar(); fecharModal(); renderPatrimonio();
-  toast(`✅ ${ST.dist[i].nome}: saldo anterior salvo — ${fmt(val)}`);
+  toast(`✅ ${ST.dist[i].nome}: ${fmt(val)} salvo`);
 }
 
 /* ── acumulado: soma de todos os meses por categoria ── */
