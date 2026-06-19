@@ -1014,22 +1014,22 @@ input[type=range].dist-range{
   <!-- PATRIMÔNIO -->
   <section class="page-content" id="pg-patrimonio">
 
-    <!-- KPIs topo -->
+    <!-- ── LINHA 1: KPIs ── -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.25rem">
       <div class="kpi" style="background:linear-gradient(135deg,#1E1B4B,#312E81);border:none">
-        <div class="kpi-label" style="color:rgba(255,255,255,.5)">🏦 Total acumulado</div>
+        <div class="kpi-label" style="color:rgba(255,255,255,.5)">🏦 Total guardado</div>
         <div class="kpi-value" id="pat-acumulado" style="color:#fff;font-size:20px">—</div>
-        <div class="kpi-sub" style="color:rgba(255,255,255,.35)">soma de todas as categorias</div>
+        <div class="kpi-sub" style="color:rgba(255,255,255,.35)">anterior + distribuído</div>
       </div>
       <div class="kpi">
-        <div class="kpi-label">💵 Saldo disponível</div>
+        <div class="kpi-label">🏦 Disponível na conta</div>
+        <div class="kpi-value" id="pat-disponivel-kpi" style="color:var(--blue)">—</div>
+        <div class="kpi-sub">saldo − o que foi separado</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">💵 Saldo do mês</div>
         <div class="kpi-value" id="pat-saldo-mes" style="color:var(--green)">—</div>
-        <div class="kpi-sub">para distribuir este mês</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">📅 Meses registrados</div>
-        <div class="kpi-value" id="pat-meses" style="color:var(--amber)">—</div>
-        <div class="kpi-sub">com distribuição lançada</div>
+        <div class="kpi-sub">receitas − gastos</div>
       </div>
       <div class="kpi">
         <div class="kpi-label">✅ Mês atual</div>
@@ -1038,22 +1038,10 @@ input[type=range].dist-range{
       </div>
     </div>
 
-    <!-- Saldo inicial por categoria -->
-    <div class="card" style="margin-bottom:1rem">
-      <div class="card-header">
-        <span class="card-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-          Saldo Anterior ao App
-        </span>
-        <span style="font-size:12px;color:var(--text-muted)">valores que já tinha antes de começar</span>
-      </div>
-      <div class="card-body" id="pat-saldo-ini-lista"></div>
-    </div>
-
-    <!-- Linha principal: Registrar + Distribuição sugerida -->
+    <!-- ── LINHA 2: Registrar + Percentuais ── -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
 
-      <!-- Registrar alocação -->
+      <!-- Registrar distribuição do mês -->
       <div class="card">
         <div class="card-header">
           <span class="card-title">
@@ -1063,36 +1051,46 @@ input[type=range].dist-range{
           <span id="pat-reg-badge" class="pill pill-amber">—</span>
         </div>
         <div class="card-body">
-          <div style="background:var(--bg-app);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;display:flex;align-items:baseline;justify-content:space-between">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
             <div>
-              <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">Saldo disponível (receitas − gastos)</div>
-              <div style="font-size:22px;font-weight:700;color:var(--green)" id="pat-calc-saldo">—</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">Saldo disponível</div>
+              <div style="font-size:20px;font-weight:700;color:var(--green)" id="pat-calc-saldo">—</div>
             </div>
             <button class="btn btn-ghost" style="font-size:12px" onclick="preencherSugerido()">Usar sugerido</button>
           </div>
           <div id="pat-reg-campos"></div>
-          <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:14px" onclick="registrarDistribuicao()">
+          <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:12px" onclick="registrarDistribuicao()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
             Registrar para <span id="pat-btn-mes" style="margin-left:4px">—</span>
           </button>
         </div>
       </div>
 
-      <!-- Distribuição sugerida -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-            Distribuição Sugerida
-          </span>
-          <span class="card-action" onclick="resetarDist()">Resetar</span>
-        </div>
-        <div class="card-body" id="dist-body"></div>
-      </div>
+      <!-- Percentuais + Saldo anterior compacto -->
+      <div style="display:flex;flex-direction:column;gap:1rem">
 
+        <!-- Percentuais sugeridos -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📊 Percentuais sugeridos</span>
+            <span class="card-action" onclick="resetarDist()">Resetar</span>
+          </div>
+          <div class="card-body" id="dist-body"></div>
+        </div>
+
+        <!-- Saldo anterior ao app — compacto -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📦 Saldo anterior ao app</span>
+            <span style="font-size:11px;color:var(--text-muted)">já tinha antes de começar</span>
+          </div>
+          <div class="card-body" id="pat-saldo-ini-lista"></div>
+        </div>
+
+      </div>
     </div>
 
-    <!-- Gráfico evolução + Regra 50-30-20 -->
+    <!-- ── LINHA 3: Evolução + Regra 50-30-20 ── -->
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:1rem;margin-bottom:1rem">
       <div class="card">
         <div class="card-header">
@@ -1114,7 +1112,7 @@ input[type=range].dist-range{
       </div>
     </div>
 
-    <!-- Histórico de distribuições -->
+    <!-- ── LINHA 4: Histórico ── -->
     <div class="card">
       <div class="card-header">
         <span class="card-title">📋 Histórico de Distribuições</span>
@@ -2425,9 +2423,12 @@ function renderPatrimonio(){
   const jaReg = _distMesAtual();
 
   // KPIs
-  document.getElementById('pat-acumulado').textContent  = fmt(_acumuladoTotal());
-  document.getElementById('pat-saldo-mes').textContent  = fmt(sal);
-  document.getElementById('pat-meses').textContent      = ST.poupanca.length;
+  document.getElementById('pat-acumulado').textContent = fmt(_acumuladoTotal());
+  document.getElementById('pat-saldo-mes').textContent = fmt(sal);
+  const totalDistribuido = (jaReg?.cats||[]).reduce((s,c)=>s+c.valor, 0);
+  const dispKpi = sal - totalDistribuido;
+  const dispEl  = document.getElementById('pat-disponivel-kpi');
+  if(dispEl){ dispEl.textContent = fmt(dispKpi); dispEl.style.color = dispKpi>=0?'var(--blue-text)':'var(--red)'; }
   const statusEl = document.getElementById('pat-mes-status');
   const subEl    = document.getElementById('pat-mes-sub');
   if(jaReg){
@@ -2559,11 +2560,12 @@ function _atualizarDisponivelConta(){
     return s+v;
   }, 0);
   const disp = sal - total;
-  const el   = document.getElementById('reg-disponivel');
-  if(el){
-    el.textContent = fmt(disp);
-    el.style.color = disp >= 0 ? 'var(--blue-text)' : 'var(--red)';
-  }
+  // atualiza linha no card de registro
+  const el = document.getElementById('reg-disponivel');
+  if(el){ el.textContent = fmt(disp); el.style.color = disp>=0?'var(--blue-text)':'var(--red)'; }
+  // atualiza KPI do topo
+  const kpi = document.getElementById('pat-disponivel-kpi');
+  if(kpi){ kpi.textContent = fmt(disp); kpi.style.color = disp>=0?'var(--blue-text)':'var(--red)'; }
 }
 
 function preencherSugerido(){
