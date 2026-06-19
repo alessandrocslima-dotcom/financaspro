@@ -2514,29 +2514,56 @@ function _renderRegCampos(sal, jaReg){
   const el = document.getElementById('pat-reg-campos');
   if(!el) return;
 
-  // captura valores já digitados antes de re-renderizar
-  const valoresAtuais = ST.dist.map((_,i)=>{
-    const inp = document.getElementById('reg-cat-'+i);
-    return inp ? inp.value : '';
-  });
-
   el.innerHTML = ST.dist.map((d,i)=>{
     const sugerido = (sal * d.pct / 100).toFixed(2);
-    // usa valor já digitado, ou o do registro salvo, ou deixa em branco
-    const digitado = valoresAtuais[i] !== '' ? valoresAtuais[i]
-      : jaReg?.cats?.find(c=>c.nome===d.nome)?.valor || '';
+    const atual    = jaReg?.cats?.find(c=>c.nome===d.nome)?.valor ?? '';
     return `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
         <div class="dist-sl-dot" style="background:${d.cor};flex-shrink:0"></div>
         <div style="flex:1;font-size:13px;color:var(--text-primary)">${d.emoji} ${d.nome}</div>
-        <div id="reg-sug-${i}" style="font-size:11px;color:var(--text-muted);flex-shrink:0">sug: ${fmt(parseFloat(sugerido))}</div>
+        <button onclick="usarSugeridoCat(${i})"
+          style="font-size:10px;padding:2px 7px;border-radius:99px;border:1px solid var(--border);
+          background:transparent;color:var(--text-muted);cursor:pointer;white-space:nowrap"
+          title="Usar valor sugerido (${fmt(parseFloat(sugerido))})">
+          sug: ${fmt(parseFloat(sugerido))}
+        </button>
         <input type="number" step="0.01" min="0"
           id="reg-cat-${i}"
-          value="${digitado}"
-          placeholder="${sugerido}"
+          value="${atual}"
+          placeholder="0,00"
+          oninput="_atualizarDisponivelConta()"
           style="width:100px;padding:6px 8px;border:1px solid var(--border-input);border-radius:var(--radius-sm);font-size:13px;text-align:right;background:var(--bg-input);color:var(--text-primary)">
       </div>`;
-  }).join('');
+  }).join('')+`
+    <div style="display:flex;align-items:center;justify-content:space-between;
+      padding:10px 12px;margin-top:6px;border-radius:var(--radius-sm);
+      background:var(--bg-app);border:1px dashed var(--border)">
+      <span style="font-size:13px;color:var(--text-secondary)">🏦 Disponível na conta</span>
+      <span style="font-size:14px;font-weight:700;color:var(--blue-text)" id="reg-disponivel">—</span>
+    </div>`;
+
+  _atualizarDisponivelConta();
+}
+
+function usarSugeridoCat(i){
+  const sal      = saldo();
+  const sugerido = (sal * ST.dist[i].pct / 100).toFixed(2);
+  const inp      = document.getElementById('reg-cat-'+i);
+  if(inp){ inp.value = sugerido; _atualizarDisponivelConta(); }
+}
+
+function _atualizarDisponivelConta(){
+  const sal   = saldo();
+  const total = ST.dist.reduce((s,_,i)=>{
+    const v = parseFloat(document.getElementById('reg-cat-'+i)?.value)||0;
+    return s+v;
+  }, 0);
+  const disp = sal - total;
+  const el   = document.getElementById('reg-disponivel');
+  if(el){
+    el.textContent = fmt(disp);
+    el.style.color = disp >= 0 ? 'var(--blue-text)' : 'var(--red)';
+  }
 }
 
 function preencherSugerido(){
@@ -2545,6 +2572,7 @@ function preencherSugerido(){
     const inp = document.getElementById('reg-cat-'+i);
     if(inp) inp.value = (sal * d.pct / 100).toFixed(2);
   });
+  _atualizarDisponivelConta();
 }
 
 function registrarDistribuicao(){
@@ -2770,13 +2798,16 @@ function atualizarDist(i, val){
   const el = document.getElementById('dist-total-alocado');
   if(el) el.innerHTML = `${fmt(totalVal)} <span style="font-size:11px;font-weight:400;color:var(--text-muted)">(${total}%)</span>`;
 
-  // sincroniza campos de registro diretamente, sem re-renderizar
+  // atualiza labels dos botões "sug:" nos campos de registro
   ST.dist.forEach((d,j)=>{
-    const inp = document.getElementById('reg-cat-'+j);
-    if(inp) inp.value = (sal * d.pct / 100).toFixed(2);
-    const sug = document.getElementById('reg-sug-'+j);
-    if(sug) sug.textContent = 'sug: '+fmt(sal * d.pct / 100);
+    const sug = document.querySelector(`button[onclick="usarSugeridoCat(${j})"]`);
+    if(sug){
+      const v = (sal * d.pct / 100);
+      sug.textContent = 'sug: '+fmt(v);
+      sug.title = `Usar valor sugerido (${fmt(v)})`;
+    }
   });
+  _atualizarDisponivelConta();
 }
 
 function resetarDist(){
