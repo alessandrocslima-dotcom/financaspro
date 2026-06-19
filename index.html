@@ -3578,6 +3578,14 @@ if('serviceWorker' in navigator){
       // Verifica atualização ao abrir
       reg.update();
 
+      // Verifica a cada 5 minutos
+      setInterval(()=>reg.update(), 5 * 60 * 1000);
+
+      // Verifica ao voltar para a aba
+      document.addEventListener('visibilitychange', ()=>{
+        if(document.visibilityState === 'visible') reg.update();
+      });
+
       // Nova versão esperando para ser ativada
       reg.addEventListener('updatefound', () => {
         const newWorker = reg.installing;
