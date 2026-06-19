@@ -1744,20 +1744,47 @@ function renderThermo(){
 
 /* --- Distribuição saldo --- */
 function renderDist(){
-  const sal = saldo();
+  const sal  = saldo();
+  const jaReg = _distMesAtual();
   document.getElementById('dist-saldo').textContent = fmt(sal);
 
-  const segs = ST.dist.map(d=>`<div class="dist-seg" style="width:${d.pct}%;background:${d.cor}"></div>`).join('');
-  document.getElementById('dist-seg').innerHTML = segs;
+  if(jaReg && jaReg.cats?.length){
+    // mostra o que foi realmente registrado no Patrimônio
+    const totalDist = jaReg.cats.reduce((s,c)=>s+c.valor, 0);
+    const disp = sal - totalDist;
 
-  document.getElementById('dist-items').innerHTML = ST.dist.map(d=>`
-    <div class="dist-row">
-      <div class="dist-dot" style="background:${d.cor}"></div>
-      <div class="dist-name">${d.emoji} ${d.nome}</div>
-      <div class="dist-val">${fmt(sal*d.pct/100)}</div>
-      <div class="dist-pct">${d.pct}%</div>
-    </div>
-  `).join('');
+    const segs = jaReg.cats
+      .filter(c=>c.valor>0)
+      .map(c=>`<div class="dist-seg" style="width:${(c.valor/sal*100).toFixed(1)}%;background:${c.cor}"></div>`)
+      .join('');
+    document.getElementById('dist-seg').innerHTML = segs;
+
+    document.getElementById('dist-items').innerHTML = jaReg.cats.map(c=>`
+      <div class="dist-row">
+        <div class="dist-dot" style="background:${c.cor}"></div>
+        <div class="dist-name">${c.emoji} ${c.nome}</div>
+        <div class="dist-val">${fmt(c.valor)}</div>
+        <div class="dist-pct">${(c.valor/sal*100).toFixed(0)}%</div>
+      </div>
+    `).join('')+(disp>0?`
+      <div class="dist-row">
+        <div class="dist-dot" style="background:var(--gray-400)"></div>
+        <div class="dist-name">🏦 Disponível na conta</div>
+        <div class="dist-val">${fmt(disp)}</div>
+        <div class="dist-pct">${(disp/sal*100).toFixed(0)}%</div>
+      </div>`:''
+    );
+  } else {
+    // sem registro — mostra só saldo e convida a distribuir
+    document.getElementById('dist-seg').innerHTML =
+      `<div class="dist-seg" style="width:100%;background:var(--indigo)"></div>`;
+    document.getElementById('dist-items').innerHTML = `
+      <div style="text-align:center;padding:.5rem 0;font-size:12px;color:rgba(255,255,255,.5)">
+        Nenhuma distribuição registrada este mês.<br>
+        <span style="color:rgba(255,255,255,.7);cursor:pointer;text-decoration:underline"
+          onclick="navToStr('patrimonio')">Registrar no Patrimônio →</span>
+      </div>`;
+  }
 }
 
 /* --- Recentes --- */
