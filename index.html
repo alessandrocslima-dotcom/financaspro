@@ -1021,8 +1021,9 @@ input[type=range].dist-range{
         <div class="kpi-value" id="pat-acumulado" style="color:#fff;font-size:20px">—</div>
         <div class="kpi-sub" style="color:rgba(255,255,255,.35)">anterior + distribuído</div>
       </div>
-      <div class="kpi">
-        <div class="kpi-label">🏦 Disponível na conta</div>
+      <div class="kpi" style="cursor:pointer;transition:box-shadow .15s" onclick="abrirModalMoverDisponivel()"
+        onmouseover="this.style.boxShadow='0 0 0 2px var(--indigo)'" onmouseout="this.style.boxShadow='none'">
+        <div class="kpi-label">🏦 Disponível na conta <span style="font-size:10px;color:var(--indigo)">(clique para mover)</span></div>
         <div class="kpi-value" id="pat-disponivel-kpi" style="color:var(--blue)">—</div>
         <div class="kpi-sub">saldo − o que foi separado</div>
       </div>
@@ -2688,7 +2689,87 @@ function removerDistribuicao(mesIdx){
   salvar(); renderPatrimonio(); toast('Removido');
 }
 
-/* ── gráfico por categoria ── */
+function abrirModalMoverDisponivel(){
+  const sal  = saldo();
+  const jaReg = _distMesAtual();
+  const totalDist = (jaReg?.cats||[]).reduce((s,c)=>s+c.valor, 0);
+  const disp = sal - totalDist;
+
+  document.getElementById('modal-title').textContent = '🏦 Mover Disponível na Conta';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="background:var(--bg-app);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">Disponível na conta agora</div>
+      <div style="font-size:24px;font-weight:700;color:var(--blue-text)">${fmt(disp)}</div>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">
+      Informe quanto quer mover para cada categoria. O disponível será atualizado automaticamente.
+    </div>
+    ${ST.dist.map((d,i)=>{
+      const atual = (jaReg?.cats||[]).find(c=>c.nome===d.nome)?.valor||0;
+      return `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <div style="width:9px;height:9px;border-radius:50%;background:${d.cor};flex-shrink:0"></div>
+          <div style="flex:1;font-size:13px;color:var(--text-primary)">${d.emoji} ${d.nome}</div>
+          <div style="font-size:11px;color:var(--text-muted);flex-shrink:0">atual: ${fmt(atual)}</div>
+          <input type="number" step="0.01" min="0" id="mov-cat-${i}"
+            placeholder="0,00" value=""
+            oninput="_atualizarRestanteModal(${disp})"
+            style="width:100px;padding:6px 8px;border:1px solid var(--border-input);border-radius:var(--radius-sm);font-size:13px;text-align:right;background:var(--bg-input);color:var(--text-primary)">
+        </div>`;
+    }).join('')}
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:var(--radius-sm);background:var(--bg-app);border:1px dashed var(--border);margin-top:6px">
+      <span style="font-size:13px;color:var(--text-secondary)">Restará na conta</span>
+      <span style="font-size:14px;font-weight:700" id="mov-restante">${fmt(disp)}</span>
+    </div>`;
+  document.getElementById('modal-foot').innerHTML = `
+    <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="confirmarMoverDisponivel()">Confirmar</button>`;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function _atualizarRestanteModal(disp){
+  const total = ST.dist.reduce((s,_,i)=>{
+    return s + (parseFloat(document.getElementById('mov-cat-'+i)?.value)||0);
+  }, 0);
+  const resta = disp - total;
+  const el = document.getElementById('mov-restante');
+  if(el){ el.textContent = fmt(resta); el.style.color = resta>=0?'var(--green)':'var(--red)'; }
+}
+
+function confirmarMoverDisponivel(){
+  const sal   = saldo();
+  const jaReg = _distMesAtual();
+  const mesLabel = _mesLabelAtual();
+
+  // monta cats atuais ou cria novo registro
+  const catsAtuais = ST.dist.map(d=>({
+    nome: d.nome, emoji: d.emoji, cor: d.cor,
+    valor: (jaReg?.cats||[]).find(c=>c.nome===d.nome)?.valor||0
+  }));
+
+  // soma os valores movidos
+  let totalMovido = 0;
+  ST.dist.forEach((d,i)=>{
+    const mov = parseFloat(document.getElementById('mov-cat-'+i)?.value)||0;
+    catsAtuais[i].valor += mov;
+    totalMovido += mov;
+  });
+
+  if(totalMovido === 0){ toast('Informe ao menos um valor para mover'); return; }
+
+  const totalDist = catsAtuais.reduce((s,c)=>s+c.valor, 0);
+  const disp = sal - totalDist;
+  if(disp < 0){ toast('Valor total excede o disponível na conta'); return; }
+
+  // salva registro atualizado
+  if(!ST.poupanca) ST.poupanca = [];
+  ST.poupanca = ST.poupanca.filter(p=>p.mesIdx !== ST.mesIdx);
+  ST.poupanca.push({ mesIdx: ST.mesIdx, mesLabel, cats: catsAtuais });
+  ST.poupanca.sort((a,b)=>a.mesIdx-b.mesIdx);
+
+  salvar(); fecharModal(); renderPatrimonio();
+  toast(`✅ ${fmt(totalMovido)} movidos para as categorias`);
+}
 function _renderGraficoPoupanca(){
   destroyChart('poupanca');
   if(!ST.poupanca || !ST.poupanca.length) return;
