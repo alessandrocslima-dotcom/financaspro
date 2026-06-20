@@ -720,6 +720,7 @@ input[type=range].dist-range{
     <span class="page-badge" id="page-badge">Junho 2026</span>
   </div>
   <div class="topbar-right">
+    <span id="salvo-indicator" style="font-size:11px;color:var(--green);opacity:0;transition:opacity .4s;display:flex;align-items:center;gap:3px;white-space:nowrap">✓ Salvo</span>
     <div style="display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:99px;background:var(--bg-card);overflow:hidden">
       <button onclick="mudarMes(-1)" title="Mês anterior"
         style="padding:5px 10px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;font-size:15px;line-height:1;transition:background .15s"
@@ -1404,11 +1405,12 @@ const ESTADO_INICIAL = {
 
 /* carrega do localStorage ou usa inicial */
 let ST;
+const LS_KEY = 'fp_v1';
+
 function carregarEstado(){
   try {
-    const s = localStorage.getItem('fp_v1');
+    const s = localStorage.getItem(LS_KEY);
     ST = s ? JSON.parse(s) : JSON.parse(JSON.stringify(ESTADO_INICIAL));
-    /* migração: se ainda tem receitas/fixos/variaveis no root, move para meses */
     if(ST.receitas || ST.fixos || ST.variaveis){
       if(!ST.meses) ST.meses = {};
       if(!ST.meses[ST.mesIdx]) ST.meses[ST.mesIdx] = { receitas:[], fixos:[], variaveis:[], aberto:true };
@@ -1419,7 +1421,28 @@ function carregarEstado(){
     if(!ST.meses) ST.meses = {};
   } catch(e){ ST = JSON.parse(JSON.stringify(ESTADO_INICIAL)); }
 }
-function salvar(){ try{ localStorage.setItem('fp_v1', JSON.stringify(ST)); }catch(e){} }
+
+function salvar(){
+  try{
+    const json = JSON.stringify(ST);
+    localStorage.setItem(LS_KEY, json);
+    localStorage.setItem(LS_KEY+'_bak', json);
+    _indicadorSalvo();
+  }catch(e){ console.warn('Erro ao salvar:', e); }
+}
+
+let _salvoTimer;
+function _indicadorSalvo(){
+  const el = document.getElementById('salvo-indicator');
+  if(!el) return;
+  el.style.opacity = '1';
+  clearTimeout(_salvoTimer);
+  _salvoTimer = setTimeout(()=>{ el.style.opacity='0'; }, 1500);
+}
+
+// salva ao fechar/minimizar
+window.addEventListener('beforeunload', ()=>salvar());
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') salvar(); });
 
 /* ── helpers de acesso ao mês ── */
 function _mes(idx){
@@ -3670,7 +3693,8 @@ function importarJSON(input){
 }
 
 function limparDados(){
-  localStorage.removeItem('fp_v1');
+  localStorage.removeItem(LS_KEY);
+  localStorage.removeItem(LS_KEY+'_bak');
   location.reload();
 }
 
