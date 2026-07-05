@@ -1556,7 +1556,7 @@ function _modalAbrirMes(){
   const fixosSug = mesAnt
     ? mesAnt.fixos.map(f=>({
         ...JSON.parse(JSON.stringify(f)),
-        id: Date.now() + Math.random(),
+        id: Date.now() + Math.floor(Math.random()*1000),
         status: 'Pendente',
         /* decrementa parcelas se parcelado */
         parcRest: f.parc && f.parcRest > 0 ? f.parcRest - 1 : f.parcRest,
@@ -1617,7 +1617,7 @@ function _cancelarAbertura(){
 function _confirmarAbertura(){
   const fixosConfirmados = _fixosPendentesAbertura
     .filter(f=>f._incluir)
-    .map(f=>{ const {_incluir,...rest}=f; return {...rest, id:Date.now()+Math.random()|0}; });
+    .map(f=>{ const {_incluir,...rest}=f; return {...rest, id:Date.now()+Math.floor(Math.random()*1000)}; });
 
   ST.meses[ST.mesIdx] = {
     receitas:  [],
@@ -2311,23 +2311,30 @@ const statusCls = s => s==='Pago'||s==='Recebido'?'pill-green':'pill-amber';
 
 function toggleStatus(tipo, id){
   const arr = tipo==='fixo' ? _mesAtivo().fixos : _mesAtivo().variaveis;
-  const item = arr.find(x=>x.id===id);
+  const item = arr.find(x=>String(x.id)===String(id));
   if(!item) return;
   item.status = item.status==='Pago' ? 'Pendente' : 'Pago';
   salvar();
-  if(tipo==='fixo')     renderFixos();
-  else                  renderVariaveis();
+  // atualiza só o botão sem re-renderizar a tabela inteira
+  const btn = document.querySelector(`button[data-toggle-id="${tipo}-${id}"]`);
+  if(btn){
+    const isPago = item.status==='Pago';
+    btn.style.background = isPago?'var(--green-bg)':'var(--amber-bg)';
+    btn.style.color       = isPago?'var(--green-text)':'var(--amber-text)';
+    btn.textContent       = isPago?'✅ Pago':'⏳ Pendente';
+  } else {
+    if(tipo==='fixo') renderFixos();
+    else              renderVariaveis();
+  }
   renderDashboard();
   toast(item.status==='Pago' ? '✅ Marcado como Pago' : '⏳ Marcado como Pendente');
 }
 
-/* ═══════════════════════════════════════
-   RENDER PÁGINAS
-═══════════════════════════════════════ */
 function _statusBtn(tipo, id, status){
   const isPago = status==='Pago';
   return `<button
-    onclick="toggleStatus('${tipo}',${id})"
+    data-toggle-id="${tipo}-${id}"
+    onclick="toggleStatus('${tipo}','${id}')"
     title="Clique para alternar"
     style="
       display:inline-flex;align-items:center;gap:4px;
