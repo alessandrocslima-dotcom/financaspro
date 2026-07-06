@@ -1331,7 +1331,9 @@ input[type=range].dist-range{
 /* ═══════════════════════════════════════
    STATE — dados reais da planilha
 ═══════════════════════════════════════ */
-const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+/* gerador de ID único garantido */
+let _idCounter = Date.now();
+function _newId(){ return ++_idCounter; }
 const PAGE_TITLES = {
   dashboard:'Dashboard',receitas:'Receitas',fixos:'Custos Fixos',
   variaveis:'Custos Variáveis',parcelamentos:'Parcelamentos',
@@ -1564,7 +1566,7 @@ function _modalAbrirMes(){
   const fixosSug = mesAnt
     ? mesAnt.fixos.map(f=>({
         ...JSON.parse(JSON.stringify(f)),
-        id: Date.now() + Math.floor(Math.random()*1000),
+        id: _newId(),
         status: 'Pendente',
         /* decrementa parcelas se parcelado */
         parcRest: f.parc && f.parcRest > 0 ? f.parcRest - 1 : f.parcRest,
@@ -1625,7 +1627,7 @@ function _cancelarAbertura(){
 function _confirmarAbertura(){
   const fixosConfirmados = _fixosPendentesAbertura
     .filter(f=>f._incluir)
-    .map(f=>{ const {_incluir,...rest}=f; return {...rest, id:Date.now()+Math.floor(Math.random()*1000)}; });
+    .map(f=>{ const {_incluir,...rest}=f; return {...rest, id:_newId()}; });
 
   ST.meses[ST.mesIdx] = {
     receitas:  [],
@@ -2199,7 +2201,7 @@ function salvarReceita(){
   if(!desc||!val){ toast('Preencha descrição e valor'); return; }
   const dataISO=_val('f-data');
   const obj={
-    id: _editId||Date.now(),
+    id: _editId||_newId(),
     desc, cat:_val('f-cat')||CATS_REC[0],
     valor:val, forma:_val('f-forma')||'Pix',
     status:_val('f-status')||'Recebido',
@@ -2218,7 +2220,7 @@ function salvarFixo(){
   if(!desc||!val){ toast('Preencha descrição e valor'); return; }
   const isParc=_chk('f-parc-toggle');
   const obj={
-    id: _editId||Date.now(),
+    id: _editId||_newId(),
     desc, cat:_val('f-cat')||CATS_FIXOS[0],
     valor:val, forma:_val('f-forma')||'Débito',
     status:_val('f-status')||'Pago',
@@ -2239,7 +2241,7 @@ function salvarVariavel(){
   if(!desc||!val){ toast('Preencha descrição e valor'); return; }
   const dataISO=_val('f-data'), vencISO=_val('f-venc');
   const obj={
-    id: _editId||Date.now(),
+    id: _editId||_newId(),
     desc, cat:_val('f-cat')||CATS_VAR[0],
     valor:val, forma:_val('f-forma')||'Débito',
     status:_val('f-status')||'Pago',
