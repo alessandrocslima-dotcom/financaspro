@@ -855,16 +855,20 @@ input[type=range].dist-range{
     <div class="summary-bar">
       <div class="summary-stats">
         <div class="stat-item">
-          <div class="stat-label">Total fixos</div>
-          <div class="stat-value" id="fix-total" style="color:var(--red)">—</div>
+          <div class="stat-label">Total do mês</div>
+          <div class="stat-value" id="fix-total" style="color:var(--text-primary)">—</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">✅ Pago</div>
+          <div class="stat-value" id="fix-pago" style="color:var(--green)">—</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">⏳ A pagar</div>
+          <div class="stat-value" id="fix-apagar" style="color:var(--red)">—</div>
         </div>
         <div class="stat-item">
           <div class="stat-label">Parcelados</div>
           <div class="stat-value" id="fix-parc" style="color:var(--blue)">—</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">Pendentes</div>
-          <div class="stat-value" id="fix-pend" style="color:var(--amber)">—</div>
         </div>
       </div>
       <div class="summary-actions">
@@ -898,12 +902,16 @@ input[type=range].dist-range{
     <div class="summary-bar">
       <div class="summary-stats">
         <div class="stat-item">
-          <div class="stat-label">Total variáveis</div>
-          <div class="stat-value" id="var-total" style="color:var(--red)">—</div>
+          <div class="stat-label">Total do mês</div>
+          <div class="stat-value" id="var-total" style="color:var(--text-primary)">—</div>
         </div>
         <div class="stat-item">
-          <div class="stat-label">Categorias</div>
-          <div class="stat-value" id="var-cats" style="color:var(--text-secondary)">—</div>
+          <div class="stat-label">✅ Pago</div>
+          <div class="stat-value" id="var-pago" style="color:var(--green)">—</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">⏳ A pagar</div>
+          <div class="stat-value" id="var-apagar" style="color:var(--red)">—</div>
         </div>
         <div class="stat-item">
           <div class="stat-label">Lançamentos</div>
@@ -2315,17 +2323,40 @@ function toggleStatus(tipo, id){
   if(!item) return;
   item.status = item.status==='Pago' ? 'Pendente' : 'Pago';
   salvar();
-  // atualiza só o botão sem re-renderizar a tabela inteira
+
+  // atualiza o botão diretamente
   const btn = document.querySelector(`button[data-toggle-id="${tipo}-${id}"]`);
   if(btn){
     const isPago = item.status==='Pago';
     btn.style.background = isPago?'var(--green-bg)':'var(--amber-bg)';
     btn.style.color       = isPago?'var(--green-text)':'var(--amber-text)';
     btn.textContent       = isPago?'✅ Pago':'⏳ Pendente';
-  } else {
-    if(tipo==='fixo') renderFixos();
-    else              renderVariaveis();
+    // atualiza visual da linha
+    const tr = btn.closest('tr');
+    if(tr){
+      tr.style.opacity = isPago?'.65':'1';
+      const tdDesc = tr.querySelector('td:nth-child(2)');
+      if(tdDesc){ tdDesc.style.textDecoration = isPago?'line-through':'none'; tdDesc.style.color = isPago?'var(--text-muted)':''; }
+      const tdVal = tr.querySelector('td:nth-child(4)');
+      if(tdVal){ tdVal.style.color = isPago?'var(--text-muted)':'var(--red)'; }
+    }
   }
+
+  // atualiza totais da barra de resumo sem re-renderizar tabela
+  if(tipo==='fixo'){
+    const fixos  = _fixos();
+    const total  = sumFixo();
+    const pago   = fixos.filter(f=>f.status==='Pago').reduce((s,f)=>s+f.valor, 0);
+    document.getElementById('fix-pago').textContent   = fmt(pago);
+    document.getElementById('fix-apagar').textContent = fmt(total - pago);
+  } else {
+    const vars   = _variaveis();
+    const total  = sumVar();
+    const pago   = vars.filter(v=>v.status==='Pago').reduce((s,v)=>s+v.valor, 0);
+    document.getElementById('var-pago').textContent   = fmt(pago);
+    document.getElementById('var-apagar').textContent = fmt(total - pago);
+  }
+
   renderDashboard();
   toast(item.status==='Pago' ? '✅ Marcado como Pago' : '⏳ Marcado como Pendente');
 }
@@ -2373,34 +2404,39 @@ function renderReceitas(){
 }
 
 function renderFixos(){
-  const total = sumFixo();
-  const parc  = _fixos().filter(f=>f.parc&&f.parcRest>0);
-  const pend  = _fixos().filter(f=>f.status==='Pendente').length;
-  document.getElementById('fix-total').textContent = fmt(total);
-  document.getElementById('fix-parc').textContent  = parc.length+' ativo'+(parc.length!==1?'s':'');
-  document.getElementById('fix-pend').textContent  = pend+' item'+(pend!==1?'s':'');
-  // reset select-all
+  const fixos  = _fixos();
+  const total  = sumFixo();
+  const pago   = fixos.filter(f=>f.status==='Pago').reduce((s,f)=>s+f.valor, 0);
+  const apagar = total - pago;
+  const parc   = fixos.filter(f=>f.parc&&f.parcRest>0);
+
+  document.getElementById('fix-total').textContent  = fmt(total);
+  document.getElementById('fix-pago').textContent   = fmt(pago);
+  document.getElementById('fix-apagar').textContent = fmt(apagar);
+  document.getElementById('fix-parc').textContent   = parc.length+' ativo'+(parc.length!==1?'s':'');
+
   const chkAll = document.getElementById('chk-fix-all');
   if(chkAll) chkAll.checked = false;
   _atualizarBarra('fixo');
 
-  document.getElementById('tbody-fix').innerHTML = _fixos().length
-    ? _fixos().map(f=>{
+  document.getElementById('tbody-fix').innerHTML = fixos.length
+    ? fixos.map(f=>{
         const origParc = f.parc && f.total>0 ? Math.round(f.total/f.valor) : 0;
-        const pago     = origParc - f.parcRest;
+        const pgParc   = origParc - f.parcRest;
         const parcLabel= f.parc
-          ? `<span class="parc-badge">💳 ${pago}/${origParc} — ${f.parcRest} rest.</span>`
+          ? `<span class="parc-badge">💳 ${pgParc}/${origParc} — ${f.parcRest} rest.</span>`
           : '<span style="color:var(--text-muted);font-size:12px">À vista</span>';
-        return `<tr>
+        const isPago   = f.status==='Pago';
+        return `<tr style="${isPago?'opacity:.65':''}">
           <td><input type="checkbox" class="chk-fix" data-id="${f.id}" onchange="_atualizarBarra('fixo')" style="accent-color:var(--indigo);cursor:pointer"></td>
-          <td class="td-desc" title="${f.desc}">${f.desc}</td>
+          <td class="td-desc" title="${f.desc}" style="${isPago?'text-decoration:line-through;color:var(--text-muted)':'font-weight:500'}">${f.desc}</td>
           <td>${f.cat}</td>
-          <td class="td-val-neg">${fmt(f.valor)}</td>
+          <td style="font-weight:600;color:${isPago?'var(--text-muted)':'var(--red)'}">${fmt(f.valor)}</td>
           <td>${parcLabel}</td>
           <td>${_statusBtn('fixo', f.id, f.status)}</td>
           <td><div class="td-actions">
-            <button class="act-btn" onclick="abrirModal('fixo',${f.id})" title="Editar">✏️</button>
-            <button class="act-btn act-del" onclick="deletar('fixo',${f.id})" title="Remover">🗑</button>
+            <button class="act-btn" onclick="abrirModal('fixo','${f.id}')" title="Editar">✏️</button>
+            <button class="act-btn act-del" onclick="deletar('fixo','${f.id}')" title="Remover">🗑</button>
           </div></td>
         </tr>`;
       }).join('')
@@ -2408,31 +2444,37 @@ function renderFixos(){
 }
 
 function renderVariaveis(){
-  const total = sumVar();
-  const cats  = new Set(_variaveis().map(v=>v.cat)).size;
-  document.getElementById('var-total').textContent = fmt(total);
-  document.getElementById('var-cats').textContent  = cats+' categ.';
-  document.getElementById('var-count').textContent = _variaveis().length;
-  // reset select-all
+  const vars   = _variaveis();
+  const total  = sumVar();
+  const pago   = vars.filter(v=>v.status==='Pago').reduce((s,v)=>s+v.valor, 0);
+  const apagar = total - pago;
+
+  document.getElementById('var-total').textContent  = fmt(total);
+  document.getElementById('var-pago').textContent   = fmt(pago);
+  document.getElementById('var-apagar').textContent = fmt(apagar);
+  document.getElementById('var-count').textContent  = vars.length;
+
   const chkAll = document.getElementById('chk-var-all');
   if(chkAll) chkAll.checked = false;
   _atualizarBarra('variavel');
 
-  document.getElementById('tbody-var').innerHTML = _variaveis().length
-    ? _variaveis().map(v=>`
-      <tr>
-        <td><input type="checkbox" class="chk-var" data-id="${v.id}" onchange="_atualizarBarra('variavel')" style="accent-color:var(--indigo);cursor:pointer"></td>
-        <td class="td-desc" title="${v.desc}">${v.desc}</td>
-        <td>${v.cat}</td>
-        <td class="td-val-neg">${fmt(v.valor)}</td>
-        <td>${v.forma||'—'}</td>
-        <td>${_statusBtn('variavel', v.id, v.status)}</td>
-        <td>${v.data||'—'}</td>
-        <td><div class="td-actions">
-          <button class="act-btn" onclick="abrirModal('variavel',${v.id})" title="Editar">✏️</button>
-          <button class="act-btn act-del" onclick="deletar('variavel',${v.id})" title="Remover">🗑</button>
-        </div></td>
-      </tr>`).join('')
+  document.getElementById('tbody-var').innerHTML = vars.length
+    ? vars.map(v=>{
+        const isPago = v.status==='Pago';
+        return `<tr style="${isPago?'opacity:.65':''}">
+          <td><input type="checkbox" class="chk-var" data-id="${v.id}" onchange="_atualizarBarra('variavel')" style="accent-color:var(--indigo);cursor:pointer"></td>
+          <td class="td-desc" title="${v.desc}" style="${isPago?'text-decoration:line-through;color:var(--text-muted)':'font-weight:500'}">${v.desc}</td>
+          <td>${v.cat}</td>
+          <td style="font-weight:600;color:${isPago?'var(--text-muted)':'var(--red)'}">${fmt(v.valor)}</td>
+          <td>${v.forma||'—'}</td>
+          <td>${_statusBtn('variavel', v.id, v.status)}</td>
+          <td>${v.data||'—'}</td>
+          <td><div class="td-actions">
+            <button class="act-btn" onclick="abrirModal('variavel','${v.id}')" title="Editar">✏️</button>
+            <button class="act-btn act-del" onclick="deletar('variavel','${v.id}')" title="Remover">🗑</button>
+          </div></td>
+        </tr>`;
+      }).join('')
     : `<tr><td colspan="8"><div class="tbl-empty"><div class="tbl-empty-ico">🛒</div><div class="tbl-empty-txt">Nenhum custo variável cadastrado.</div></div></td></tr>`;
 }
 
